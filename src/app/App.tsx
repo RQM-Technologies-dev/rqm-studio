@@ -1,6 +1,6 @@
 import { AnimatePresence } from 'framer-motion'
 import { Header } from './layout/Header'
-import { Scene } from '../render/scene/Scene'
+import { AnimatedSVGScene } from '../render/scene/AnimatedSVGScene'
 import { ControlPanel } from '../components/panels/ControlPanel'
 import { InspectorPanel } from '../components/panels/InspectorPanel'
 import { CircuitStrip } from '../components/circuit/CircuitStrip'
@@ -20,30 +20,9 @@ export default function App() {
         {/* Left control panel */}
         <ControlPanel />
 
-        {/* Central 3D scene */}
+        {/* Central animated scene */}
         <div className="flex-1 relative">
-          <Scene />
-          {/* Axis labels overlay */}
-          <div className="absolute top-3 right-3 flex flex-col gap-1 pointer-events-none">
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-0.5 bg-red-400" />
-              <span className="text-xs text-red-400 font-mono">x</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-0.5 bg-green-400" />
-              <span className="text-xs text-green-400 font-mono">y</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-0.5 bg-blue-400" />
-              <span className="text-xs text-blue-400 font-mono">z (|0⟩ axis)</span>
-            </div>
-          </div>
-
-          {/* Pole labels overlay */}
-          <div className="absolute top-3 left-3 pointer-events-none flex flex-col gap-1">
-            <span className="text-xs text-green-400/70 font-mono">|0⟩ ↑</span>
-            <span className="text-xs text-red-400/70 font-mono">|1⟩ ↓</span>
-          </div>
+          <AnimatedSVGScene />
 
           <AnimatePresence>
             {mode === 'optimize' && <OptimizationDemo />}
