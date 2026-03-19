@@ -1,8 +1,7 @@
 import { create } from 'zustand'
 import type { GateStep, StudioMode } from '../types/circuit'
 import type { Quaternion } from '../math/quaternion/types'
-import { IDENTITY } from '../math/quaternion/quaternion'
-import { multiply } from '../math/quaternion/quaternion'
+import { IDENTITY, multiply, canonicalize } from '../math/quaternion/quaternion'
 import { DEFAULT_CIRCUIT } from '../data/defaultCircuit'
 import { optimizeCircuit } from '../math/compiler/rules'
 
@@ -47,7 +46,10 @@ export const useStudioStore = create<StudioState>((set, get) => ({
     if (currentStep >= circuit.length - 1) return
 
     const nextStep = currentStep + 1
-    const newQuat = multiply(circuit[nextStep].quaternion, get().currentQuaternion)
+    // Accumulate gate: q_new = gate · q_current, then canonicalize (w ≥ 0).
+    // Canonicalization selects the shorter geodesic representative on S³
+    // without changing the physical rotation, giving stable display values.
+    const newQuat = canonicalize(multiply(circuit[nextStep].quaternion, get().currentQuaternion))
     set({
       currentStep: nextStep,
       currentQuaternion: newQuat,
@@ -60,14 +62,14 @@ export const useStudioStore = create<StudioState>((set, get) => ({
     if (currentStep < 0) return
 
     const prevStep = currentStep - 1
-    // Recompute quaternion from scratch up to prevStep
+    // Recompute quaternion from scratch up to prevStep and canonicalize.
     let q = IDENTITY
     for (let i = 0; i <= prevStep; i++) {
       q = multiply(circuit[i].quaternion, q)
     }
     set({
       currentStep: prevStep,
-      currentQuaternion: q,
+      currentQuaternion: canonicalize(q),
       activeGateLabel: prevStep >= 0 ? circuit[prevStep].label : null,
     })
   },
@@ -89,7 +91,7 @@ export const useStudioStore = create<StudioState>((set, get) => ({
     }
     set({
       currentStep: clampedStep,
-      currentQuaternion: q,
+      currentQuaternion: canonicalize(q),
       activeGateLabel: clampedStep >= 0 ? circuit[clampedStep].label : null,
     })
   },

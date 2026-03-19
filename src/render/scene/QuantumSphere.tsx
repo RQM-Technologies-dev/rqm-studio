@@ -1,7 +1,7 @@
 import { Line } from '@react-three/drei'
 import * as THREE from 'three'
 import type { Quaternion as RQMQuat } from '../../math/quaternion/types'
-import { toAxisAngle } from '../../math/quaternion/quaternion'
+import { rotateVector } from '../../math/quaternion/quaternion'
 
 interface Props {
   stateQuaternion: RQMQuat
@@ -11,18 +11,10 @@ const SPHERE_RADIUS = 1.2
 
 export function QuantumSphere({ stateQuaternion }: Props) {
 
-  // Compute the Bloch sphere tip from the quaternion
-  const axisAngle = toAxisAngle(stateQuaternion)
-  const { axis, angle } = axisAngle
-
-  // Rodrigues' formula to rotate (0, 0, 1) by the quaternion
-  const cos = Math.cos(angle)
-  const sin = Math.sin(angle)
-  const [ax, ay, az] = axis
-
-  const bx = ax * az * (1 - cos) + ay * sin
-  const by = ay * az * (1 - cos) - ax * sin
-  const bz = cos + az * az * (1 - cos)
+  // Compute the Bloch sphere state vector using the canonical quaternion rotation
+  // p′ = q p q* applied to the |0⟩ reference axis [0, 0, 1].
+  // This directly implements theory §12: r′ = q r₀ q⁻¹.
+  const [bx, by, bz] = rotateVector([0, 0, 1], stateQuaternion)
 
   const bloch = new THREE.Vector3(bx, by, bz).normalize().multiplyScalar(SPHERE_RADIUS)
 

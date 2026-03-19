@@ -1,26 +1,26 @@
 import { useMemo } from 'react'
 import type { Quaternion } from '../math/quaternion/types'
-import { toAxisAngle, formatQuat } from '../math/quaternion/quaternion'
+import { toAxisAngle, formatQuat, rotateVector } from '../math/quaternion/quaternion'
 
-/** Compute display data from the current quaternion state */
+/**
+ * Compute display data from the current quaternion state.
+ *
+ * The Bloch vector is derived by rotating the |0⟩ reference axis (0, 0, 1)
+ * using the canonical quaternion rotation p′ = q p q* — directly implementing
+ * the theory's section on "Bloch sphere from quaternion orientation".
+ */
 export function useStateVector(q: Quaternion) {
   return useMemo(() => {
     const axisAngle = toAxisAngle(q)
     const angleDeg = (axisAngle.angle * 180) / Math.PI
 
-    const [ax, ay, az] = axisAngle.axis
-    const angle = axisAngle.angle
-
-    // Rodrigues' rotation formula applied to (0, 0, 1) — the |0⟩ Bloch vector
-    const cosA = Math.cos(angle)
-    const sinA = Math.sin(angle)
-
-    const vx = (1 - cosA) * ax * az + sinA * ay
-    const vy = (1 - cosA) * ay * az - sinA * ax
-    const vz = cosA + (1 - cosA) * az * az
+    // Rotate the |0⟩ reference axis [0, 0, 1] by the current gate quaternion.
+    // This is the fundamental operation p′ = q p q* that maps the quaternion
+    // rotation to its induced Bloch sphere orientation.
+    const blochVector = rotateVector([0, 0, 1], q)
 
     return {
-      blochVector: [vx, vy, vz] as [number, number, number],
+      blochVector,
       axisAngle,
       angleDeg,
       quatString: formatQuat(q),

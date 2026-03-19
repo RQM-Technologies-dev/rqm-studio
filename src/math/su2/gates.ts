@@ -66,6 +66,31 @@ export function areInverses(q: Quaternion, p: Quaternion): boolean {
 }
 
 /** Return the inverse of a gate (conjugate for unit quaternions) */
-export function inverse(q: Quaternion): Quaternion {
+export function gateInverse(q: Quaternion): Quaternion {
   return normalize({ w: q.w, x: -q.x, y: -q.y, z: -q.z })
+}
+
+/**
+ * Try to match a unit quaternion against the standard named gates.
+ *
+ * The comparison uses `approxEqual` which handles both q ≈ gate and q ≈ −gate
+ * (global-phase / SU(2) double-cover equivalence), so the function is robust to
+ * canonicalization choices.
+ *
+ * Returns the gate label ('I', 'X', 'Y', 'Z', 'H', 'S', 'T') or null if not matched.
+ */
+export function recognizeGate(q: Quaternion, tolerance = 1e-4): string | null {
+  const candidates: [string, Quaternion][] = [
+    ['I', GateI],
+    ['X', GateX],
+    ['Y', GateY],
+    ['Z', GateZ],
+    ['H', GateH],
+    ['S', GateS],
+    ['T', GateT],
+  ]
+  for (const [label, gate] of candidates) {
+    if (approxEqual(q, gate, tolerance)) return label
+  }
+  return null
 }

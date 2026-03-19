@@ -730,6 +730,7 @@ export function QuaternionicSpinorVisual() {
   const makeQuatFromState = (state: SpinorConfig) => {
     const u = { x: state.u.x, y: state.u.y, z: state.u.z };
     const len = Math.sqrt(u.x * u.x + u.y * u.y + u.z * u.z);
+    if (len < 1e-10) return [1, 0, 0, 0]; // guard: degenerate axis → identity
     u.x /= len; u.y /= len; u.z /= len;
     const halfPhi = state.phi0 / 2;  // Use half-angle for SU(2) convention
     const w = Math.cos(halfPhi);
@@ -1036,12 +1037,14 @@ export function QuaternionicSpinorVisual() {
                         {(() => {
                           const nextState = spinors[(currentStateIndex + 1) % spinors.length];
                           // Compute the gate quaternion q_gate = q2 * q1^(-1)
+                          // Uses SU(2) half-angle convention: q = [cos(θ/2), u·sin(θ/2)]
                           const makeQuat = (state: SpinorConfig) => {
                             const uLen = Math.sqrt(state.u.x * state.u.x + state.u.y * state.u.y + state.u.z * state.u.z);
+                            if (uLen < 1e-10) return [1, 0, 0, 0]; // guard: degenerate axis → identity
                             const u = { x: state.u.x / uLen, y: state.u.y / uLen, z: state.u.z / uLen };
-                            const phi = state.phi0;
-                            const w = Math.cos(phi);
-                            const sinp = Math.sin(phi);
+                            const halfPhi = state.phi0 / 2;  // half-angle for SU(2)
+                            const w = Math.cos(halfPhi);
+                            const sinp = Math.sin(halfPhi);
                             return [w, u.x * sinp, u.y * sinp, u.z * sinp];
                           };
                           const q1 = makeQuat(s);
@@ -1071,10 +1074,12 @@ export function QuaternionicSpinorVisual() {
                       </div>
                       <div className="text-center text-xl text-white font-serif">
                         {(() => {
-                          const a0 = Math.cos(currentPhi);
-                          const a1 = s.u.x * Math.sin(currentPhi);
-                          const b0 = s.u.y * Math.sin(currentPhi);
-                          const b1 = s.u.z * Math.sin(currentPhi);
+                          // Display state as quaternion q = cos(φ/2) + u·sin(φ/2) (SU(2) half-angle)
+                          const halfPhi = currentPhi / 2;
+                          const a0 = Math.cos(halfPhi);
+                          const a1 = s.u.x * Math.sin(halfPhi);
+                          const b0 = s.u.y * Math.sin(halfPhi);
+                          const b1 = s.u.z * Math.sin(halfPhi);
                           return `${a0.toFixed(2)} ${a1 >= 0 ? '+' : ''}${a1.toFixed(2)}i ${b0 >= 0 ? '+' : ''}${b0.toFixed(2)}j ${b1 >= 0 ? '+' : ''}${b1.toFixed(2)}k`;
                         })()}
                       </div>
