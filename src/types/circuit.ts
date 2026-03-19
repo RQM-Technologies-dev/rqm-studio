@@ -23,4 +23,4 @@ export interface CompilerNote {
 }
 
 /** Application mode */
-export type StudioMode = 'visualize' | 'compile' | 'optimize'
+export type StudioMode = 'visualize' | 'compile' | 'optimize' | 'eigenspinor' | 'quaternionic'

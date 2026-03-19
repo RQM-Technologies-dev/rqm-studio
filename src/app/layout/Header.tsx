@@ -1,6 +1,18 @@
 import { motion } from 'framer-motion'
+import { useStudioStore } from '../../store'
+import type { StudioMode } from '../../types/circuit'
+
+const MODES: { id: StudioMode; label: string }[] = [
+  { id: 'visualize', label: 'Visualize' },
+  { id: 'compile', label: 'Compile' },
+  { id: 'optimize', label: 'Optimize' },
+  { id: 'quaternionic', label: 'Quaternionic' },
+  { id: 'eigenspinor', label: 'EigenSpinor' },
+]
 
 export function Header() {
+  const { mode, setMode } = useStudioStore()
+
   return (
     <motion.header
       initial={{ y: -20, opacity: 0 }}
@@ -21,6 +33,25 @@ export function Header() {
           </p>
         </div>
       </div>
+
+      {/* Mode switcher — always visible so full-screen modes can be exited */}
+      <nav className="hidden md:flex items-center gap-1 bg-rqm-navy rounded-lg p-1 border border-slate-700/50">
+        {MODES.map((m) => (
+          <button
+            key={m.id}
+            onClick={() => setMode(m.id)}
+            className={`
+              px-3 py-1.5 rounded text-xs font-medium transition-all duration-200
+              ${mode === m.id
+                ? 'bg-cyan-600/20 text-cyan-400 border border-cyan-600/40'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/30 border border-transparent'
+              }
+            `}
+          >
+            {m.label}
+          </button>
+        ))}
+      </nav>
 
       <div className="flex items-center gap-4">
         <span className="text-xs text-slate-600 font-mono">v0.1.0</span>
