@@ -14,7 +14,7 @@ const MODES: { id: StudioMode; label: string }[] = [
 
 export function ControlPanel() {
   const { mode, setMode, currentQuaternion, activeGateLabel, circuit, currentStep } = useStudioStore()
-  const { axisAngle, axisDeg, quatString } = useStateVector(currentQuaternion)
+  const { axisAngle, angleDeg, quatString } = useStateVector(currentQuaternion)
 
   const note = activeGateLabel ? COMPILER_NOTES[activeGateLabel] : null
   const gateInfo = currentStep >= 0 ? circuit[currentStep] : null
@@ -74,7 +74,7 @@ export function ControlPanel() {
           value={`[${axisAngle.axis.map((v) => v.toFixed(3)).join(', ')}]`}
           mono
         />
-        <DataRow label="Angle" value={`${axisDeg.toFixed(1)}°`} mono accent />
+        <DataRow label="Angle" value={`${angleDeg.toFixed(1)}°`} mono accent />
       </div>
 
       {/* Compiler status */}

@@ -6,7 +6,7 @@ import { toAxisAngle, formatQuat } from '../math/quaternion/quaternion'
 export function useStateVector(q: Quaternion) {
   return useMemo(() => {
     const axisAngle = toAxisAngle(q)
-    const axisDeg = (axisAngle.angle * 180) / Math.PI
+    const angleDeg = (axisAngle.angle * 180) / Math.PI
 
     const [ax, ay, az] = axisAngle.axis
     const angle = axisAngle.angle
@@ -22,7 +22,7 @@ export function useStateVector(q: Quaternion) {
     return {
       blochVector: [vx, vy, vz] as [number, number, number],
       axisAngle,
-      axisDeg,
+      angleDeg,
       quatString: formatQuat(q),
     }
   }, [q])

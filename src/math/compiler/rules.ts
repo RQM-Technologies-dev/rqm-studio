@@ -65,7 +65,7 @@ export function fuseSameAxisRotations(gates: GateStep[]): CompilerResult {
         const fusedQuat = composeGates([gates[i].quaternion, gates[i + 1].quaternion])
         const fusedAngle = (a.angle + b.angle).toFixed(3)
         notes.push(
-          `Fused ${gates[i].label}·${gates[i + 1].label} → single Rz(${fusedAngle}) rotation`,
+          `Fused ${gates[i].label}·${gates[i + 1].label} → single rotation of ${fusedAngle} rad about the same axis`,
         )
         result.push({
           ...gates[i],

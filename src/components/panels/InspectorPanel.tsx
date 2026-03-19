@@ -7,7 +7,7 @@ import { DataRow } from '../ui/DataRow'
 
 export function InspectorPanel() {
   const { currentQuaternion, activeGateLabel, optimizationNotes } = useStudioStore()
-  const { blochVector, axisAngle, axisDeg, quatString } = useStateVector(currentQuaternion)
+  const { blochVector, axisAngle, angleDeg, quatString } = useStateVector(currentQuaternion)
 
   const note = activeGateLabel ? COMPILER_NOTES[activeGateLabel] : null
 
@@ -30,7 +30,7 @@ export function InspectorPanel() {
         <SectionHeader title="Quaternion Form" subtitle="Unit quaternion representation" />
         <DataRow label="q = w+xi+yj+zk" value={quatString} mono />
         <DataRow label="Rotation axis" value={`(${axisAngle.axis.map((v) => v.toFixed(3)).join(', ')})`} mono />
-        <DataRow label="Rotation angle" value={`${axisDeg.toFixed(2)}°`} mono accent />
+        <DataRow label="Rotation angle" value={`${angleDeg.toFixed(2)}°`} mono accent />
       </div>
 
       {/* Compiler interpretation */}
