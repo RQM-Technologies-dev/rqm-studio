@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useStudioStore } from '../../store'
 import type { Quaternion } from '../../math/quaternion/types'
+import { blochStateColor } from '../../math/blochColor'
 
 // ─── Quaternion math (array format [w, x, y, z]) ───────────────────────────
 
@@ -107,7 +108,7 @@ interface Star {
 
 // ─── Component ────────────────────────────────────────────────────────────
 
-const ANIM_DURATION = 1600       // ms for gate transition animation
+const ANIM_DURATION = 2400       // ms for gate transition animation (slower for better visual effect)
 const MAX_PATH = 120             // max path history points
 const FOV = 550                  // perspective field-of-view depth
 const SPHERE_SCALE = 200         // base visual radius in pixels (scaled by cos φ at runtime)
@@ -382,6 +383,11 @@ export function AnimatedSVGScene() {
   const tipProj = proj([bx, by, bz])
   const originProj = proj([0, 0, 0])
 
+  // Dynamic sphere colour based on Bloch z-component
+  const sphereColor = blochStateColor(bz)
+  // Slightly brighter/lighter variant for the equatorial ring accent
+  const eqColor = blochStateColor(bz * 0.5) // midway tint for the equator ring
+
   // Pole projections — rotate with the sphere
   const northPole = proj(rotateVec([0, 0, 1], dqRot))
   const southPole = proj(rotateVec([0, 0, -1], dqRot))
@@ -455,15 +461,15 @@ export function AnimatedSVGScene() {
           ))}
         </g>
 
-        {/* Sphere wireframe — entire grid rotates with the quantum state (glowing cyan) */}
-        <g filter="url(#sphere-glow)" opacity={0.5} stroke="#22d3ee" strokeWidth={0.9} fill="none">
+        {/* Sphere wireframe — entire grid rotates with the quantum state; colour = state */}
+        <g filter="url(#sphere-glow)" opacity={0.5} stroke={sphereColor} strokeWidth={0.9} fill="none">
           {sphereLines.map((d, i) => (
             <path key={i} d={d} />
           ))}
         </g>
 
         {/* Equatorial ring (rotates with sphere, brighter accent) */}
-        <path d={eqPath} stroke="#67e8f9" strokeWidth={1.8} fill="none" opacity={0.75} filter="url(#sphere-glow)" />
+        <path d={eqPath} stroke={eqColor} strokeWidth={1.8} fill="none" opacity={0.75} filter="url(#sphere-glow)" />
 
         {/* XYZ axes */}
         <line
@@ -513,7 +519,7 @@ export function AnimatedSVGScene() {
           y1={originProj.y}
           x2={tipProj.x}
           y2={tipProj.y}
-          stroke="#22d3ee"
+          stroke={sphereColor}
           strokeWidth={8}
           opacity={0.15}
           strokeLinecap="round"
@@ -524,15 +530,15 @@ export function AnimatedSVGScene() {
           y1={originProj.y}
           x2={tipProj.x}
           y2={tipProj.y}
-          stroke="#22d3ee"
+          stroke={sphereColor}
           strokeWidth={2.5}
           opacity={0.95}
           strokeLinecap="round"
         />
         {/* Tip glow */}
-        <circle cx={tipProj.x} cy={tipProj.y} r={12} fill="#22d3ee" opacity={0.12} />
+        <circle cx={tipProj.x} cy={tipProj.y} r={12} fill={sphereColor} opacity={0.12} />
         {/* Tip dot */}
-        <circle cx={tipProj.x} cy={tipProj.y} r={5} fill="#22d3ee" opacity={1} />
+        <circle cx={tipProj.x} cy={tipProj.y} r={5} fill={sphereColor} opacity={1} />
         <circle cx={tipProj.x} cy={tipProj.y} r={2.5} fill="white" opacity={0.9} />
 
         {/* Drag hint */}
