@@ -95,36 +95,6 @@ function easeInOutCubic(t: number): number {
   return -(Math.cos(Math.PI * t) - 1) / 2
 }
 
-// ─── Hopf-lattice sample generation ──────────────────────────────────────
-// Generates m×n unit quaternions uniformly covering S³ via the Hopf
-// parameterisation: q = [cos(η)cos(ξ₁), cos(η)sin(ξ₁), sin(η)cos(ξ₂), sin(η)sin(ξ₂)]
-// where η ∈ (0, π/2) and ξ ∈ [0, 2π).
-
-function generateHopfLattice(m: number, n: number): number[][] {
-  const pts: number[][] = []
-  for (let i = 0; i < m; i++) {
-    const eta = ((i + 0.5) / m) * (Math.PI / 2)
-    const cosEta = Math.cos(eta)
-    const sinEta = Math.sin(eta)
-    for (let j = 0; j < n; j++) {
-      const xi1 = (j / n) * 2 * Math.PI
-      const xi2 = xi1 + (i / m) * Math.PI // offset xi2 per latitude ring
-      pts.push([
-        cosEta * Math.cos(xi1),
-        cosEta * Math.sin(xi1),
-        sinEta * Math.cos(xi2),
-        sinEta * Math.sin(xi2),
-      ])
-    }
-  }
-  return pts
-}
-
-// Pre-computed lattice (6 eta levels × 12 xi steps = 72 sample quaternions)
-const HOPF_M = 6
-const HOPF_N = 12
-const HOPF_SAMPLES: number[][] = generateHopfLattice(HOPF_M, HOPF_N)
-
 // ─── Star shape ───────────────────────────────────────────────────────────
 
 interface Star {
@@ -140,10 +110,9 @@ interface Star {
 const ANIM_DURATION = 1600       // ms for gate transition animation
 const MAX_PATH = 120             // max path history points
 const FOV = 550                  // perspective field-of-view depth
-const SPHERE_SCALE = 200         // visual radius in pixels
+const SPHERE_SCALE = 200         // base visual radius in pixels (scaled by cos φ at runtime)
 const MIN_PATH_DISTANCE = 0.008  // minimum Bloch vector displacement to add a path point
 const ROTATION_SENSITIVITY = 0.008  // radians per pixel for camera drag
-const MANIFOLD_FADE_DURATION = 400  // ms to fade manifold field out after gate animation ends
 
 export function AnimatedSVGScene() {
   const currentQuaternion = useStudioStore((s) => s.currentQuaternion)
@@ -158,8 +127,7 @@ export function AnimatedSVGScene() {
     to: number[]
     startTime: number
     running: boolean
-    deltaGate: number[]  // gate quaternion being applied: to * conj(from)
-  }>({ from: [1, 0, 0, 0], to: [1, 0, 0, 0], startTime: 0, running: false, deltaGate: [1, 0, 0, 0] })
+  }>({ from: [1, 0, 0, 0], to: [1, 0, 0, 0], startTime: 0, running: false })
 
   // Camera
   // Initial view: slight 3/4 elevated view (matches RQMSpinorVisualizer default)
@@ -173,12 +141,6 @@ export function AnimatedSVGScene() {
 
   // Path history (Bloch vector points)
   const pathHistoryRef = useRef<Array<[number, number, number]>>([])
-
-  // Manifold field: Bloch vectors of all Hopf lattice samples transformed by the running gate
-  const manifoldBlochRef = useRef<Array<[number, number, number]>>([])
-  const manifoldOpacityRef = useRef(0)       // 0 = hidden, 1 = fully visible
-  const manifoldFadeStartRef = useRef(0)     // timestamp when fade-out began
-  const manifoldFadingRef = useRef(false)    // true while fading out
 
   // Container size
   const containerRef = useRef<HTMLDivElement>(null)
@@ -219,20 +181,12 @@ export function AnimatedSVGScene() {
   // Watch for quaternion changes → start new animation
   useEffect(() => {
     const toArr = quatToArr(currentQuaternion)
-    // Compute the gate being applied: G = to * conj(from)
-    // At this point displayQuatRef.current is the last rendered frame position, which
-    // becomes `from` in the new animation. qNorm guards against accumulated float drift.
-    const deltaGate = qNorm(qMul(toArr, qConj(displayQuatRef.current)))
     animRef.current = {
       from: [...displayQuatRef.current],
       to: toArr,
       startTime: performance.now(),
       running: true,
-      deltaGate,
     }
-    // Show the manifold field at full opacity for the duration of this animation
-    manifoldOpacityRef.current = 1
-    manifoldFadingRef.current = false
   }, [currentQuaternion])
 
   // Main RAF loop
@@ -250,30 +204,8 @@ export function AnimatedSVGScene() {
         const q = qSlerp(animRef.current.from, animRef.current.to, easedT)
         displayQuatRef.current = q
 
-        // Manifold field: left-multiply every Hopf sample by the partial gate
-        // qFrame = slerp(I, G, t) — same easing as the spinor animation
-        const qFrame = qSlerp([1, 0, 0, 0], animRef.current.deltaGate, easedT)
-        manifoldBlochRef.current = HOPF_SAMPLES.map((p) => {
-          const tp = qMul(qFrame, p)
-          return blochFromQuat({ w: tp[0], x: tp[1], y: tp[2], z: tp[3] }) as [number, number, number]
-        })
-
         if (t >= 1) {
           animRef.current.running = false
-          // Begin fade-out of the manifold field
-          manifoldFadingRef.current = true
-          manifoldFadeStartRef.current = now
-        }
-        changed = true
-      }
-
-      // Fade out manifold field after the gate animation ends
-      if (manifoldFadingRef.current) {
-        const fadeElapsed = now - manifoldFadeStartRef.current
-        manifoldOpacityRef.current = Math.max(0, 1 - fadeElapsed / MANIFOLD_FADE_DURATION)
-        if (manifoldOpacityRef.current <= 0) {
-          manifoldFadingRef.current = false
-          manifoldBlochRef.current = []
         }
         changed = true
       }
@@ -385,13 +317,20 @@ export function AnimatedSVGScene() {
   const W = size.w
   const H = size.h
 
-  // Direct projection function — reads viewQuatRef.current at render time
-  const proj = (p: [number, number, number]) =>
-    project(p, viewQuatRef.current, W, H, SPHERE_SCALE, FOV)
-
   // Apply display quaternion to rotate every wire point on the sphere:
   // p' = q p q*  (quaternion sandwich, i.e. q = cos φ + u sin φ acting on S²)
   const dqRot = displayQuatRef.current
+
+  // cos φ = w component of the display quaternion.
+  // During slerp, w can temporarily become negative; Math.abs keeps the scale
+  // positive and symmetric — sphere shrinks toward zero at φ = π/2 from either side.
+  // Scale ranges from 40% (|cos φ| = 0) to 100% (|cos φ| = 1).
+  const cosPhi = dqRot[0]
+  const dynamicScale = SPHERE_SCALE * (0.4 + 0.6 * Math.abs(cosPhi))
+
+  // Direct projection function — reads viewQuatRef.current at render time
+  const proj = (p: [number, number, number]) =>
+    project(p, viewQuatRef.current, W, H, dynamicScale, FOV)
 
   // Bloch sphere wireframe paths
   const sphereLines: string[] = []
@@ -469,12 +408,6 @@ export function AnimatedSVGScene() {
   const lz = proj([0, 0, LABEL_OFFSET])
   const lNorth = proj(rotateVec([0, 0, 1.6], dqRot))
   const lSouth = proj(rotateVec([0, 0, -1.6], dqRot))
-
-  // Manifold field: project each Hopf sample's current Bloch vector to screen
-  const manifoldDots = manifoldBlochRef.current.map(([mbx, mby, mbz]: [number, number, number]) => {
-    const p = proj([mbx, mby, mbz])
-    return { x: p.x, y: p.y, depth: p.depth }
-  })
 
   return (
     <div
@@ -574,31 +507,6 @@ export function AnimatedSVGScene() {
           ))}
         </g>
 
-        {/* Manifold field — S³ coordinate transformation visualization.
-            Each amber dot is one of 72 Hopf-lattice sample quaternions,
-            left-multiplied by the same partial gate slerp that drives the
-            state vector. All dots rotate rigidly in unison, making the
-            global SU(2) isometry of S³ visible. */}
-        {manifoldOpacityRef.current > 0 && manifoldDots.length > 0 && (
-          <g>
-            {manifoldDots.map((dot, i) => {
-              // dot.depth is the z-component of the view-rotated Bloch vector.
-              // Bloch vectors lie on the unit sphere, so depth ∈ [-1, 1]; no clamping needed.
-              const depthAlpha = (dot.depth + 1) * 0.5
-              return (
-                <circle
-                  key={i}
-                  cx={dot.x}
-                  cy={dot.y}
-                  r={2.5}
-                  fill="#f59e0b"
-                  opacity={manifoldOpacityRef.current * (0.25 + 0.55 * depthAlpha)}
-                />
-              )
-            })}
-          </g>
-        )}
-
         {/* State vector glow (outer) */}
         <line
           x1={originProj.x}
@@ -637,6 +545,18 @@ export function AnimatedSVGScene() {
           textAnchor="end"
         >
           drag to rotate
+        </text>
+
+        {/* cos φ readout — live scale indicator */}
+        <text
+          x={10}
+          y={H - 10}
+          fill="#94a3b8"
+          fontSize={11}
+          fontFamily="monospace"
+          textAnchor="start"
+        >
+          {`cosφ = ${cosPhi.toFixed(3)}`}
         </text>
       </svg>
     </div>

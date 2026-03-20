@@ -11,18 +11,24 @@ const SPHERE_RADIUS = 1.2
 
 export function QuantumSphere({ stateQuaternion }: Props) {
 
+  // cos φ = w component of the quaternion (with canonicalization w ≥ 0).
+  // Scale the sphere so it visually shrinks/grows with cos φ:
+  // full size at w = 1 (identity) down to 40% at w = 0 (180° rotation).
+  const cosPhi = Math.abs(stateQuaternion.w)
+  const scaledRadius = SPHERE_RADIUS * (0.4 + 0.6 * cosPhi)
+
   // Compute the Bloch sphere state vector using the canonical quaternion rotation
   // p′ = q p q* applied to the |0⟩ reference axis [0, 0, 1].
   // This directly implements theory §12: r′ = q r₀ q⁻¹.
   const [bx, by, bz] = rotateVector([0, 0, 1], stateQuaternion)
 
-  const bloch = new THREE.Vector3(bx, by, bz).normalize().multiplyScalar(SPHERE_RADIUS)
+  const bloch = new THREE.Vector3(bx, by, bz).normalize().multiplyScalar(scaledRadius)
 
   return (
     <group>
       {/* Wireframe unit sphere */}
       <mesh>
-        <sphereGeometry args={[SPHERE_RADIUS, 32, 32]} />
+        <sphereGeometry args={[scaledRadius, 32, 32]} />
         <meshBasicMaterial
           color="#0f1629"
           wireframe={false}
@@ -31,7 +37,7 @@ export function QuantumSphere({ stateQuaternion }: Props) {
         />
       </mesh>
       <mesh>
-        <sphereGeometry args={[SPHERE_RADIUS, 24, 24]} />
+        <sphereGeometry args={[scaledRadius, 24, 24]} />
         <meshBasicMaterial
           color="#06b6d4"
           wireframe={true}
@@ -41,18 +47,18 @@ export function QuantumSphere({ stateQuaternion }: Props) {
       </mesh>
 
       {/* Equatorial circle */}
-      <EquatorialRing radius={SPHERE_RADIUS} />
+      <EquatorialRing radius={scaledRadius} />
 
       {/* XYZ axes */}
-      <AxisLine start={[-SPHERE_RADIUS * 1.3, 0, 0]} end={[SPHERE_RADIUS * 1.3, 0, 0]} color="#f87171" />
-      <AxisLine start={[0, -SPHERE_RADIUS * 1.3, 0]} end={[0, SPHERE_RADIUS * 1.3, 0]} color="#86efac" />
-      <AxisLine start={[0, 0, -SPHERE_RADIUS * 1.3]} end={[0, 0, SPHERE_RADIUS * 1.3]} color="#93c5fd" />
+      <AxisLine start={[-scaledRadius * 1.3, 0, 0]} end={[scaledRadius * 1.3, 0, 0]} color="#f87171" />
+      <AxisLine start={[0, -scaledRadius * 1.3, 0]} end={[0, scaledRadius * 1.3, 0]} color="#86efac" />
+      <AxisLine start={[0, 0, -scaledRadius * 1.3]} end={[0, 0, scaledRadius * 1.3]} color="#93c5fd" />
 
       {/* State vector */}
       <StateVector tip={bloch} />
 
       {/* Pole labels */}
-      <PoleDots radius={SPHERE_RADIUS} />
+      <PoleDots radius={scaledRadius} />
     </group>
   )
 }

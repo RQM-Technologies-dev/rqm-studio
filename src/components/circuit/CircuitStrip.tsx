@@ -1,9 +1,53 @@
+import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { useStudioStore } from '../../store'
 
 export function CircuitStrip() {
   const { circuit, currentStep, stepForward, stepBackward, resetCircuit, jumpToStep } =
     useStudioStore()
+
+  const [isAutoPlaying, setIsAutoPlaying] = useState(false)
+
+  // Auto-advance: step forward every 3 seconds while playing
+  useEffect(() => {
+    if (!isAutoPlaying) return
+
+    // If we've reached the last step, stop auto-play
+    if (currentStep >= circuit.length - 1) {
+      setIsAutoPlaying(false)
+      return
+    }
+
+    const timer = setTimeout(stepForward, 3000)
+    return () => clearTimeout(timer)
+  }, [isAutoPlaying, currentStep, circuit.length, stepForward])
+
+  const handlePlayPause = useCallback(() => {
+    if (isAutoPlaying) {
+      setIsAutoPlaying(false)
+    } else {
+      // If at the last step, reset first then play
+      if (currentStep >= circuit.length - 1) {
+        resetCircuit()
+      }
+      setIsAutoPlaying(true)
+    }
+  }, [isAutoPlaying, currentStep, circuit.length, resetCircuit])
+
+  const handleReset = useCallback(() => {
+    setIsAutoPlaying(false)
+    resetCircuit()
+  }, [resetCircuit])
+
+  const handleBack = useCallback(() => {
+    setIsAutoPlaying(false)
+    stepBackward()
+  }, [stepBackward])
+
+  const handleNext = useCallback(() => {
+    setIsAutoPlaying(false)
+    stepForward()
+  }, [stepForward])
 
   return (
     <motion.div
@@ -44,7 +88,7 @@ export function CircuitStrip() {
             <motion.button
               whileHover={{ scale: 1.08 }}
               whileTap={{ scale: 0.92 }}
-              onClick={() => jumpToStep(index)}
+              onClick={() => { setIsAutoPlaying(false); jumpToStep(index) }}
               className={`
                 px-2.5 py-1.5 rounded font-mono text-sm font-bold border transition-all duration-200
                 ${index === currentStep
@@ -77,22 +121,34 @@ export function CircuitStrip() {
       {/* Controls */}
       <div className="flex items-center gap-2">
         <button
-          onClick={resetCircuit}
+          onClick={handleReset}
           className="px-3 py-1.5 text-xs rounded bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-700 hover:border-slate-500 transition-all"
         >
           ↺ Reset
         </button>
         <button
-          onClick={stepBackward}
+          onClick={handleBack}
           disabled={currentStep < 0}
           className="px-3 py-1.5 text-xs rounded bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-700 hover:border-slate-500 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
         >
           ← Back
         </button>
         <button
-          onClick={stepForward}
+          onClick={handlePlayPause}
+          className={`
+            px-3 py-1.5 text-xs rounded border transition-all font-medium
+            ${isAutoPlaying
+              ? 'bg-amber-700/30 text-amber-400 border-amber-700/50 hover:bg-amber-600/30 hover:border-amber-500/60'
+              : 'bg-cyan-700/30 text-cyan-400 border-cyan-700/50 hover:bg-cyan-600/30 hover:border-cyan-500/60'
+            }
+          `}
+        >
+          {isAutoPlaying ? '⏸ Pause' : '▶ Play'}
+        </button>
+        <button
+          onClick={handleNext}
           disabled={currentStep >= circuit.length - 1}
-          className="px-3 py-1.5 text-xs rounded bg-cyan-700/30 text-cyan-400 hover:bg-cyan-600/30 border border-cyan-700/50 hover:border-cyan-500/60 transition-all disabled:opacity-30 disabled:cursor-not-allowed font-medium"
+          className="px-3 py-1.5 text-xs rounded bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-700 hover:border-slate-500 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
         >
           Next →
         </button>
