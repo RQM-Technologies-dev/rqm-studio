@@ -10,6 +10,8 @@ const MODES: { id: StudioMode; label: string }[] = [
   { id: 'visualize', label: 'Visualize' },
   { id: 'compile', label: 'Compile' },
   { id: 'optimize', label: 'Optimize' },
+  { id: 'quaternionic', label: 'Quaternionic' },
+  { id: 'eigenspinor', label: 'EigenSpinor' },
 ]
 
 export function ControlPanel() {

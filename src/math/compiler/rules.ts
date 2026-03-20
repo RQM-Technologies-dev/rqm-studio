@@ -1,6 +1,6 @@
 import type { GateStep } from '../../types/circuit'
-import { isIdentity, areInverses, composeGates } from '../su2/gates'
-import { toAxisAngle } from '../quaternion'
+import { isIdentity, areInverses, composeGates, recognizeGate } from '../su2/gates'
+import { toAxisAngle, canonicalize } from '../quaternion'
 
 /** Result of a compiler pass */
 export interface CompilerResult {
@@ -84,13 +84,59 @@ export function fuseSameAxisRotations(gates: GateStep[]): CompilerResult {
 }
 
 /**
+ * Canonicalize all gate quaternions to the w ≥ 0 representative on S³.
+ *
+ * Both q and −q represent the same physical rotation.  Choosing w ≥ 0
+ * selects the "shorter geodesic" representative, which gives a canonical
+ * half-angle φ ∈ [0, π/2] and stable numeric behaviour throughout the compiler.
+ */
+export function canonicalizeQuaternions(gates: GateStep[]): CompilerResult {
+  const result = gates.map((g) => ({ ...g, quaternion: canonicalize(g.quaternion) }))
+  return { gates: result, notes: [], optimized: false }
+}
+
+/**
+ * After fusion passes, attempt to recognise whether any gate's accumulated
+ * quaternion exactly matches a standard named gate (I, X, Y, Z, H, S, T).
+ *
+ * When a match is found a compiler note is emitted explaining the equivalence.
+ * This is the final step in the quaternionic IR: map an arbitrary accumulated
+ * rotation back to a human-readable gate label where possible.
+ */
+export function recognizeNamedGates(gates: GateStep[]): CompilerResult {
+  const notes: string[] = []
+  const result = gates.map((g) => {
+    const name = recognizeGate(g.quaternion)
+    if (name !== null && name !== g.label) {
+      notes.push(`${g.label} → recognized as standard gate ${name}`)
+      return { ...g, label: name }
+    }
+    return g
+  })
+  return { gates: result, notes, optimized: notes.length > 0 }
+}
+
+/**
  * Run all optimization passes in sequence.
+ *
+ * Pass order (theory §19):
+ *  1. canonicalizeQuaternions — enforce w ≥ 0 on all gate quaternions
+ *  2. removeIdentities        — eliminate no-op gates
+ *  3. cancelInversePairs      — cancel adjacent G·G⁻¹ pairs
+ *  4. fuseSameAxisRotations   — merge adjacent same-axis rotations
+ *  5. recognizeNamedGates     — map fused quaternions back to named gates
  */
 export function optimizeCircuit(gates: GateStep[]): CompilerResult {
   let current = gates
   const allNotes: string[] = []
 
-  const passes = [removeIdentities, cancelInversePairs, fuseSameAxisRotations]
+  const passes = [
+    canonicalizeQuaternions,
+    removeIdentities,
+    cancelInversePairs,
+    fuseSameAxisRotations,
+    recognizeNamedGates,
+  ]
 
   for (const pass of passes) {
     const result = pass(current)
