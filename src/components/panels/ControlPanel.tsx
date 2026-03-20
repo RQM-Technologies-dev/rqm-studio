@@ -4,14 +4,13 @@ import { useStateVector } from '../../hooks/useStateVector'
 import { COMPILER_NOTES } from '../../data/compilerNotes'
 import { SectionHeader } from '../ui/SectionHeader'
 import { DataRow } from '../ui/DataRow'
+import { MathDisplay } from '../ui/MathDisplay'
 import type { StudioMode } from '../../types/circuit'
 
 const MODES: { id: StudioMode; label: string }[] = [
   { id: 'visualize', label: 'Visualize' },
   { id: 'compile', label: 'Compile' },
   { id: 'optimize', label: 'Optimize' },
-  { id: 'quaternionic', label: 'Quaternionic' },
-  { id: 'eigenspinor', label: 'EigenSpinor' },
 ]
 
 export function ControlPanel() {
@@ -25,7 +24,7 @@ export function ControlPanel() {
     <motion.aside
       initial={{ x: -20, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
-      className="w-64 flex-shrink-0 flex flex-col gap-4 overflow-y-auto scrollbar-thin p-4"
+      className="w-80 flex-shrink-0 flex flex-col gap-4 overflow-y-auto scrollbar-thin p-4"
     >
       {/* Mode selector */}
       <div className="panel-card p-3">
@@ -36,7 +35,7 @@ export function ControlPanel() {
               key={m.id}
               onClick={() => setMode(m.id)}
               className={`
-                text-left px-3 py-1.5 rounded text-sm font-medium transition-all duration-200
+                text-left px-3 py-2 rounded text-base font-medium transition-all duration-200
                 ${mode === m.id
                   ? 'bg-cyan-600/20 text-cyan-400 border border-cyan-600/40'
                   : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/30'
@@ -70,7 +69,9 @@ export function ControlPanel() {
       {/* Quaternion readout */}
       <div className="panel-card p-3">
         <SectionHeader title="Quaternion" subtitle="SU(2) state" />
-        <DataRow label="q" value={quatString} mono accent />
+        <div className="py-1.5 border-b border-slate-700/40">
+          <MathDisplay expr={`q = ${quatString}`} className="text-cyan-400 text-sm" />
+        </div>
         <DataRow
           label="Axis"
           value={`[${axisAngle.axis.map((v) => v.toFixed(3)).join(', ')}]`}
@@ -83,13 +84,13 @@ export function ControlPanel() {
       {note && (
         <div className="panel-card p-3 border-cyan-600/30">
           <SectionHeader title="Compiler" />
-          <p className="text-xs text-slate-400 leading-relaxed">{note.educational}</p>
+          <p className="text-sm text-slate-400 leading-relaxed">{note.educational}</p>
         </div>
       )}
 
       <div className="panel-card p-3">
         <SectionHeader title="Progress" />
-        <p className="text-sm text-slate-400">
+        <p className="text-base text-slate-400">
           Step{' '}
           <span className="text-cyan-400 font-mono">
             {currentStep + 1}
