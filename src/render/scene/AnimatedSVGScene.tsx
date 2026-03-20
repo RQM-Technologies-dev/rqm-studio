@@ -91,7 +91,8 @@ function quatToArr(q: Quaternion): number[] {
 }
 
 function easeInOutCubic(t: number): number {
-  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
+  // Sine-based easing: very smooth acceleration and deceleration between states
+  return -(Math.cos(Math.PI * t) - 1) / 2
 }
 
 // ─── Hopf-lattice sample generation ──────────────────────────────────────
@@ -136,7 +137,7 @@ interface Star {
 
 // ─── Component ────────────────────────────────────────────────────────────
 
-const ANIM_DURATION = 700        // ms for gate transition animation
+const ANIM_DURATION = 1600       // ms for gate transition animation
 const MAX_PATH = 120             // max path history points
 const FOV = 550                  // perspective field-of-view depth
 const SPHERE_SCALE = 200         // visual radius in pixels
@@ -388,6 +389,10 @@ export function AnimatedSVGScene() {
   const proj = (p: [number, number, number]) =>
     project(p, viewQuatRef.current, W, H, SPHERE_SCALE, FOV)
 
+  // Apply display quaternion to rotate every wire point on the sphere:
+  // p' = q p q*  (quaternion sandwich, i.e. q = cos φ + u sin φ acting on S²)
+  const dqRot = displayQuatRef.current
+
   // Bloch sphere wireframe paths
   const sphereLines: string[] = []
   const LAT = 18
@@ -399,7 +404,7 @@ export function AnimatedSVGScene() {
     const pts = []
     for (let j = 0; j <= LON; j++) {
       const phi = (j / LON) * Math.PI * 2
-      const p = proj([r * Math.cos(phi), r * Math.sin(phi), z])
+      const p = proj(rotateVec([r * Math.cos(phi), r * Math.sin(phi), z], dqRot))
       pts.push(`${j === 0 ? 'M' : 'L'} ${p.x.toFixed(1)},${p.y.toFixed(1)}`)
     }
     sphereLines.push(pts.join(' '))
@@ -411,17 +416,17 @@ export function AnimatedSVGScene() {
       const theta = (i / LAT) * Math.PI
       const r = Math.sin(theta)
       const z = Math.cos(theta)
-      const p = proj([r * Math.cos(phi), r * Math.sin(phi), z])
+      const p = proj(rotateVec([r * Math.cos(phi), r * Math.sin(phi), z], dqRot))
       pts.push(`${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)},${p.y.toFixed(1)}`)
     }
     sphereLines.push(pts.join(' '))
   }
 
-  // Equatorial ring (thicker / brighter)
+  // Equatorial ring (rotates with the sphere)
   const eqPts = []
   for (let j = 0; j <= 64; j++) {
     const phi = (j / 64) * Math.PI * 2
-    const p = proj([Math.cos(phi), Math.sin(phi), 0])
+    const p = proj(rotateVec([Math.cos(phi), Math.sin(phi), 0], dqRot))
     eqPts.push(`${j === 0 ? 'M' : 'L'} ${p.x.toFixed(1)},${p.y.toFixed(1)}`)
   }
   const eqPath = eqPts.join(' ')
@@ -433,14 +438,14 @@ export function AnimatedSVGScene() {
   const az = { x: proj([0, 0, -AXIS_LEN]), px: proj([0, 0, AXIS_LEN]) }
 
   // State vector (Bloch vector)
-  const dq = displayQuatRef.current
+  const dq = dqRot
   const [bx, by, bz] = blochFromQuat({ w: dq[0], x: dq[1], y: dq[2], z: dq[3] })
   const tipProj = proj([bx, by, bz])
   const originProj = proj([0, 0, 0])
 
-  // Pole projections
-  const northPole = proj([0, 0, 1])
-  const southPole = proj([0, 0, -1])
+  // Pole projections — rotate with the sphere
+  const northPole = proj(rotateVec([0, 0, 1], dqRot))
+  const southPole = proj(rotateVec([0, 0, -1], dqRot))
 
   // Path segments
   const pathSegs: { x1: number; y1: number; x2: number; y2: number; t: number }[] = []
@@ -457,13 +462,13 @@ export function AnimatedSVGScene() {
     })
   }
 
-  // Label positions (slightly beyond axis tips)
+  // Label positions (slightly beyond axis tips and rotated poles)
   const LABEL_OFFSET = 1.5
   const lx = proj([LABEL_OFFSET, 0, 0])
   const ly = proj([0, LABEL_OFFSET, 0])
   const lz = proj([0, 0, LABEL_OFFSET])
-  const lNorth = proj([0, 0, 1.6])
-  const lSouth = proj([0, 0, -1.6])
+  const lNorth = proj(rotateVec([0, 0, 1.6], dqRot))
+  const lSouth = proj(rotateVec([0, 0, -1.6], dqRot))
 
   // Manifold field: project each Hopf sample's current Bloch vector to screen
   const manifoldDots = manifoldBlochRef.current.map(([mbx, mby, mbz]: [number, number, number]) => {
@@ -492,6 +497,17 @@ export function AnimatedSVGScene() {
         {/* Background */}
         <rect width={W} height={H} fill="#0a0e1a" />
 
+        {/* Glow filter for the sphere */}
+        <defs>
+          <filter id="sphere-glow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="3.5" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+
         {/* Stars */}
         <g>
           {starsRef.current.map((s, i) => (
@@ -506,15 +522,15 @@ export function AnimatedSVGScene() {
           ))}
         </g>
 
-        {/* Sphere wireframe */}
-        <g opacity={0.18} stroke="#06b6d4" strokeWidth={0.7} fill="none">
+        {/* Sphere wireframe — entire grid rotates with the quantum state (glowing cyan) */}
+        <g filter="url(#sphere-glow)" opacity={0.5} stroke="#22d3ee" strokeWidth={0.9} fill="none">
           {sphereLines.map((d, i) => (
             <path key={i} d={d} />
           ))}
         </g>
 
-        {/* Equatorial ring */}
-        <path d={eqPath} stroke="#1e4a6e" strokeWidth={1.5} fill="none" opacity={0.6} />
+        {/* Equatorial ring (rotates with sphere, brighter accent) */}
+        <path d={eqPath} stroke="#67e8f9" strokeWidth={1.8} fill="none" opacity={0.75} filter="url(#sphere-glow)" />
 
         {/* XYZ axes */}
         <line
