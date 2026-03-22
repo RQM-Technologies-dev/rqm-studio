@@ -1,9 +1,11 @@
 import { create } from 'zustand'
 import type { GateStep, StudioMode } from '../types/circuit'
 import type { Quaternion } from '../math/quaternion/types'
+import type { OptimizationRunReport, BenchmarkRunResult, BenchmarkCircuitDefinition } from '../types/optimization'
 import { IDENTITY, multiply, canonicalize } from '../math/quaternion/quaternion'
 import { DEFAULT_CIRCUIT } from '../data/defaultCircuit'
 import { optimizeCircuit } from '../math/compiler/rules'
+import { runOptimization } from '../api/optimizationApi'
 
 interface StudioState {
   // Mode
@@ -27,6 +29,21 @@ interface StudioState {
 
   // Active gate label (for panel display)
   activeGateLabel: string | null
+
+  // ── Truth Mode ──────────────────────────────────────────────────────────
+  truthModeActive: boolean
+  truthModeLoading: boolean
+  truthModeError: string | null
+  truthModeReport: OptimizationRunReport | null
+  runTruthMode: (definition: BenchmarkCircuitDefinition) => Promise<void>
+  clearTruthMode: () => void
+
+  // ── Benchmark Mode ──────────────────────────────────────────────────────
+  benchmarkResults: BenchmarkRunResult[]
+  benchmarkRunning: boolean
+  benchmarkError: string | null
+  runBenchmark: (definition: BenchmarkCircuitDefinition) => Promise<void>
+  clearBenchmarks: () => void
 }
 
 export const useStudioStore = create<StudioState>((set, get) => ({
@@ -94,5 +111,61 @@ export const useStudioStore = create<StudioState>((set, get) => ({
       currentQuaternion: canonicalize(q),
       activeGateLabel: clampedStep >= 0 ? circuit[clampedStep].label : null,
     })
+  },
+
+  // ── Truth Mode ────────────────────────────────────────────────────────────
+  truthModeActive: false,
+  truthModeLoading: false,
+  truthModeError: null,
+  truthModeReport: null,
+
+  runTruthMode: async (definition) => {
+    set({ truthModeActive: true, truthModeLoading: true, truthModeError: null, truthModeReport: null })
+    try {
+      const report = await runOptimization(definition)
+      set({ truthModeLoading: false, truthModeReport: report })
+    } catch (err) {
+      set({
+        truthModeLoading: false,
+        truthModeError: err instanceof Error ? err.message : 'Unknown error',
+      })
+    }
+  },
+
+  clearTruthMode: () => {
+    set({ truthModeActive: false, truthModeLoading: false, truthModeError: null, truthModeReport: null })
+  },
+
+  // ── Benchmark Mode ────────────────────────────────────────────────────────
+  benchmarkResults: [],
+  benchmarkRunning: false,
+  benchmarkError: null,
+
+  runBenchmark: async (definition) => {
+    set({ benchmarkRunning: true, benchmarkError: null })
+    try {
+      const report = await runOptimization(definition)
+      const result: BenchmarkRunResult = {
+        definition,
+        report,
+        ranAt: new Date().toISOString(),
+      }
+      set((state) => ({
+        benchmarkRunning: false,
+        benchmarkResults: [
+          result,
+          ...state.benchmarkResults.filter((r) => r.definition.circuitId !== definition.circuitId),
+        ],
+      }))
+    } catch (err) {
+      set({
+        benchmarkRunning: false,
+        benchmarkError: err instanceof Error ? err.message : 'Unknown error',
+      })
+    }
+  },
+
+  clearBenchmarks: () => {
+    set({ benchmarkResults: [], benchmarkError: null })
   },
 }))
