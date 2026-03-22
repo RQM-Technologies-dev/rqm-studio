@@ -1,15 +1,19 @@
 import { motion } from 'framer-motion'
 import { useStudioStore } from '../../store'
 import type { StudioMode } from '../../types/circuit'
+import { isLiveApiEnabled } from '../../api/optimizationApi'
 
-const MODES: { id: StudioMode; label: string }[] = [
-  { id: 'visualize', label: 'Visualize' },
-  { id: 'compile', label: 'Compile' },
-  { id: 'optimize', label: 'Optimize' },
+const MODES: { id: StudioMode; label: string; group: 'core' | 'evidence' }[] = [
+  { id: 'visualize', label: 'Visualize', group: 'core' },
+  { id: 'compile', label: 'Compile', group: 'core' },
+  { id: 'optimize', label: 'Optimize', group: 'core' },
+  { id: 'truth', label: 'Truth Mode', group: 'evidence' },
+  { id: 'benchmark', label: 'Benchmark', group: 'evidence' },
 ]
 
 export function Header() {
   const { mode, setMode } = useStudioStore()
+  const liveApi = isLiveApiEnabled()
 
   return (
     <motion.header
@@ -27,12 +31,12 @@ export function Header() {
             RQM Studio
           </h1>
           <p className="text-xs text-slate-500 leading-none mt-0.5">
-            Visualizing Quaternionic Compilation
+            Optimization Evidence &amp; Verification
           </p>
         </div>
       </div>
 
-      {/* Mode switcher — always visible so full-screen modes can be exited */}
+      {/* Mode switcher */}
       <nav className="hidden md:flex items-center gap-1 bg-rqm-navy rounded-lg p-1 border border-slate-700/50">
         {MODES.map((m) => (
           <button
@@ -41,7 +45,9 @@ export function Header() {
             className={`
               px-3 py-1.5 rounded text-xs font-medium transition-all duration-200
               ${mode === m.id
-                ? 'bg-cyan-600/20 text-cyan-400 border border-cyan-600/40'
+                ? m.group === 'evidence'
+                  ? 'bg-purple-600/20 text-purple-400 border border-purple-600/40'
+                  : 'bg-cyan-600/20 text-cyan-400 border border-cyan-600/40'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/30 border border-transparent'
               }
             `}
@@ -52,6 +58,11 @@ export function Header() {
       </nav>
 
       <div className="flex items-center gap-4">
+        {liveApi && (
+          <span className="text-xs text-teal-400 font-mono border border-teal-500/30 px-2 py-0.5 rounded">
+            Live API
+          </span>
+        )}
         <span className="text-xs text-slate-600 font-mono">v0.1.0</span>
         <a
           href="https://github.com/RQM-Technologies-dev/rqm-studio"
