@@ -56,6 +56,36 @@ function deriveMockMetrics(gates: GateStep[]): OptimizationMetrics {
   }
 }
 
+/** Per-pass micro-explanation bullet points for the self-justifying trace */
+const PASS_EXPLANATIONS: Record<string, string[]> = {
+  canonicalize_quaternions: [
+    'Enforces w ≥ 0 representative on S³.',
+    'Selects shorter geodesic path for each gate.',
+    'Ensures stable numeric behaviour throughout the compiler.',
+  ],
+  remove_identities: [
+    'Eliminates I gates — they contribute no rotation.',
+    'Reduces gate count at zero structural cost.',
+    'Prerequisite for subsequent fusion passes.',
+  ],
+  cancel_inverse_pairs: [
+    'Detects adjacent G·G⁻¹ pairs (e.g. X·X = I, H·H = I).',
+    'Cancels pairs, reducing gate count by 2 per match.',
+    'Preserves unitary equivalence exactly.',
+  ],
+  fuse_same_axis_rotations: [
+    'Identifies adjacent rotations sharing the same axis.',
+    'Merges them into a single rotation: θ₁ + θ₂.',
+    'Shortens the geodesic path on S³.',
+    'Reduces gate count and circuit depth.',
+  ],
+  recognize_named_gates: [
+    'Maps fused quaternions back to named gates (I, X, Y, Z, S, T).',
+    'Produces a human-readable canonical output.',
+    'Verifies accumulated rotation matches a known standard gate.',
+  ],
+}
+
 function buildMockTrace(notes: string[]): TransformTraceEntry[] {
   const passNames = [
     'canonicalize_quaternions',
@@ -68,10 +98,12 @@ function buildMockTrace(notes: string[]): TransformTraceEntry[] {
     const matchingNote = notes.find((n) =>
       n.toLowerCase().includes(pass.replace(/_/g, ' ').split('_')[0]),
     )
+    const applied = matchingNote !== undefined
     return {
       pass,
-      applied: matchingNote !== undefined,
+      applied,
       notes: matchingNote ?? 'No reduction at this pass.',
+      details: applied ? PASS_EXPLANATIONS[pass] : undefined,
     }
   })
 }
@@ -80,8 +112,6 @@ function buildMockTrace(notes: string[]): TransformTraceEntry[] {
 const MIN_MOCK_LATENCY_MS = 600
 /** Maximum additional random variance in simulated latency in milliseconds */
 const MAX_MOCK_LATENCY_VARIANCE_MS = 800
-
-
 
 // ---------------------------------------------------------------------------
 // Mock adapter — runs the local quaternionic compiler as a stand-in

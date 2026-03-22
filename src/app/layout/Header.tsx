@@ -58,11 +58,20 @@ export function Header() {
       </nav>
 
       <div className="flex items-center gap-4">
-        {liveApi && (
-          <span className="text-xs text-teal-400 font-mono border border-teal-500/30 px-2 py-0.5 rounded">
-            Live API
-          </span>
-        )}
+        <span
+          className={`text-xs font-mono flex items-center gap-1.5 px-2 py-0.5 rounded border ${
+            liveApi
+              ? 'text-teal-400 border-teal-500/30 bg-teal-500/10'
+              : 'text-slate-500 border-slate-600/30'
+          }`}
+        >
+          <span
+            className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
+              liveApi ? 'bg-teal-400' : 'bg-slate-600'
+            }`}
+          />
+          {liveApi ? 'Live API' : 'Mock Mode (local compiler)'}
+        </span>
         <span className="text-xs text-slate-600 font-mono">v0.1.0</span>
         <a
           href="https://github.com/RQM-Technologies-dev/rqm-studio"

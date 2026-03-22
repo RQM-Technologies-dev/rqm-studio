@@ -102,7 +102,7 @@ export const BENCHMARK_CORPUS: BenchmarkCircuitDefinition[] = [
     circuitId: 'grover_oracle_2',
     name: "Grover Oracle (2-qubit)",
     category: 'mixed-control',
-    description: "Grover's oracle marking the |11⟩ state.",
+    description: "Grover's oracle marking the |11\u27e9 state.",
     qubitCount: 2,
     backend: 'qiskit.simulator',
     baseline: 'standard_qiskit_flow',

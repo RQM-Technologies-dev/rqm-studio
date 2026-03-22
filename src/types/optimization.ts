@@ -35,6 +35,8 @@ export interface TransformTraceEntry {
   pass: string
   applied: boolean
   notes?: string
+  /** Micro-explanation bullet points shown in the self-justifying trace view */
+  details?: string[]
   metricsImpact?: Record<string, number>
 }
 
