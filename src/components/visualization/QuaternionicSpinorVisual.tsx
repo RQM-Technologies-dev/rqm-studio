@@ -105,6 +105,7 @@ export function QuaternionicSpinorVisual() {
       });
     }
     starsRef.current = stars;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Utility: normalize axis vector
@@ -183,7 +184,7 @@ export function QuaternionicSpinorVisual() {
     const azimuthal = Math.atan2(u.y, u.x); // Angle in x-y plane (-π to π)
     
     // Normalize azimuthal to 0-360 degrees
-    let azimuthDeg = (azimuthal * 180 / Math.PI + 360) % 360;
+    const azimuthDeg = (azimuthal * 180 / Math.PI + 360) % 360;
     
     // Calculate base hue based on z and azimuthal
     let hue;

@@ -18,7 +18,6 @@ export function MathDisplay({ expr, display = false, className }: Props) {
   return (
     <span
       className={className}
-      // eslint-disable-next-line react/no-danger
       dangerouslySetInnerHTML={{ __html: html }}
     />
   )
