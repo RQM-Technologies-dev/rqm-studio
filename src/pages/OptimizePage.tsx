@@ -74,6 +74,16 @@ export function OptimizePage() {
     await runQuickstart()
   }, [runQuickstart])
 
+  const handleJsonChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setCircuitJson(e.target.value)
+    setParseError(null)
+  }, [])
+
+  const handleClear = useCallback(() => {
+    clearOptimize()
+    setParseError(null)
+  }, [clearOptimize])
+
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Top quickstart banner */}
@@ -121,7 +131,7 @@ export function OptimizePage() {
           <div className="flex-1 overflow-hidden p-3">
             <textarea
               value={circuitJson}
-              onChange={(e) => { setCircuitJson(e.target.value); setParseError(null) }}
+              onChange={handleJsonChange}
               className="w-full h-full bg-slate-900/50 border border-slate-700 rounded p-3 text-xs font-mono text-slate-200 resize-none focus:outline-none focus:border-cyan-500/50 transition-colors"
               spellCheck={false}
               placeholder="Paste rqm-circuits JSON here…"
@@ -141,7 +151,7 @@ export function OptimizePage() {
               {optimizeLoading ? 'Optimizing…' : '⚡ Optimize'}
             </button>
             <button
-              onClick={() => { clearOptimize(); setParseError(null) }}
+              onClick={handleClear}
               className="px-3 py-2 rounded-lg border border-slate-600 text-slate-400 hover:text-slate-200 text-xs transition-colors"
             >
               Clear

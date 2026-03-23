@@ -49,8 +49,7 @@ export function gateStepsToRqmCircuit(gates: GateStep[], name?: string): RqmCirc
   const instructions = gates.map((g) => ({
     gate: g.label,
     targets: [0],
-    ...(g.label === 'CNOT' || g.label === 'CX' ? { controls: [0], targets: [1] } : {}),
-    ...(g.label === 'CZ' ? { controls: [0], targets: [1] } : {}),
+    ...(['CNOT', 'CX', 'CZ'].includes(g.label) ? { controls: [0], targets: [1] } : {}),
   }))
   return {
     schema_version: '1.0',
