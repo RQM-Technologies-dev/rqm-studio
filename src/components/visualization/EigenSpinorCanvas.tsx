@@ -180,6 +180,7 @@ export function EigenSpinorCanvas() {
     }
 
     return { positiveHelix, negativeHelix }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [frame, amplitude])
 
   // Combined quaternionic spinor trajectory (interference ellipse)
@@ -196,6 +197,7 @@ export function EigenSpinorCanvas() {
     }
 
     return points
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [frame, amplitude])
 
   // Current position markers
@@ -211,6 +213,7 @@ export function EigenSpinorCanvas() {
     const spinorMarker = project([amplitude * Math.cos(tSpinor), amplitude * Math.sin(tSpinor) * 0.6, 0], q)
 
     return { posMarker, negMarker, spinorMarker }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [frame, phase, amplitude])
 
   // Critical-sphere wireframe
@@ -245,6 +248,7 @@ export function EigenSpinorCanvas() {
     }
 
     return circles
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [frame])
 
   // Starfield
@@ -264,6 +268,7 @@ export function EigenSpinorCanvas() {
       }
     }
     return result
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [frame, baseStarPositions])
 
   const pointsToPath = (points: Array<{ x: number; y: number }>) => {
